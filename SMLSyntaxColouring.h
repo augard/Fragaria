@@ -29,7 +29,7 @@ Unless required by applicable law or agreed to in writing, software distributed 
 	id document;
 	NSUndoManager *undoManager;
 	
-	SMLLayoutManager *firstLayoutManager, *secondLayoutManager, *thirdLayoutManager, *fourthLayoutManager;
+	SMLLayoutManager *firstLayoutManager, *__unsafe_unretained secondLayoutManager, *__unsafe_unretained thirdLayoutManager, *__unsafe_unretained fourthLayoutManager;
 	
 	NSInteger lastCursorLocation;
 	
@@ -77,14 +77,14 @@ Unless required by applicable law or agreed to in writing, software distributed 
 }
 
 @property BOOL reactToChanges;
-@property (readonly) NSUndoManager *undoManager;
+@property (retain, readonly) NSUndoManager *undoManager;
 
 @property (copy) NSString *functionDefinition;
 @property (copy) NSString *removeFromFunction;
 
-@property (assign) SMLLayoutManager *secondLayoutManager;
-@property (assign) SMLLayoutManager *thirdLayoutManager;
-@property (assign) SMLLayoutManager *fourthLayoutManager;
+@property (unsafe_unretained) SMLLayoutManager *secondLayoutManager;
+@property (unsafe_unretained) SMLLayoutManager *thirdLayoutManager;
+@property (unsafe_unretained) SMLLayoutManager *fourthLayoutManager;
 
 - (id)initWithDocument:(id)document;
 - (void)pageRecolourTextView:(SMLTextView *)textView;

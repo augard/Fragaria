@@ -24,6 +24,14 @@ of the framework. I have decided to not include them in my project, to ease the 
 To learn how to get this framework working with your application, please refer to the 
 original project here: <https://github.com/mugginsoft/Fragaria>.
 
+##System Requirements
+This fork is now built using ARC (Automatic Reference Counting). This requires your project to
+be ARC compliant and linked against Mac OS X 10.7 SDKs or later. In other words, your
+application will run on the following machines:
+
+Any Mac with an Intel 64bit-capable processor
+Mac OS X 10.7 or later installed
+
 ##License
 The license for this framework is included in the LICENSE-2.0.txt file. Any changes
 follow the same License.

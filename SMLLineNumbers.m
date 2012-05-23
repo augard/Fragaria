@@ -21,6 +21,7 @@ Unless required by applicable law or agreed to in writing, software distributed 
 
 #import "SMLLineNumbers.h"
 #import "SMLSyntaxColouring.h"
+#import "SMLTextView.h"
 
 @implementation SMLLineNumbers
 
@@ -68,7 +69,7 @@ Unless required by applicable law or agreed to in writing, software distributed 
  */
 - (void)observeValueForKeyPath:(NSString *)keyPath ofObject:(id)object change:(NSDictionary *)change context:(void *)context
 {
-	if ([(NSString *)context isEqualToString:@"TextFontChanged"]) {
+	if ([(__bridge NSString *)context isEqualToString:@"TextFontChanged"]) {
 		attributes = [[NSDictionary alloc] initWithObjectsAndKeys:[NSUnarchiver unarchiveObjectWithData:[SMLDefaults valueForKey:@"TextFont"]], NSFontAttributeName, nil];
 	} else {
 		[super observeValueForKeyPath:keyPath ofObject:object change:change context:context];
@@ -144,6 +145,8 @@ Unless required by applicable law or agreed to in writing, software distributed 
 	NSInteger currentLineHeight;
 	
 	CGFloat addToScrollPoint;
+    
+    BOOL allDone = FALSE;
 	
 	if (updatingLineNumbersForClipView == clipView) {
 		return;
@@ -156,7 +159,8 @@ Unless required by applicable law or agreed to in writing, software distributed 
 		if (checkWidth == YES && recolour == YES) {
 			[[document valueForKey:@"syntaxColouring"] pageRecolourTextView:textView];
 		}
-		goto allDone;
+		updatingLineNumbersForClipView = nil;
+        allDone = TRUE;
 	}
 	
 	scrollView = (NSScrollView *)[clipView superview];
@@ -171,85 +175,86 @@ Unless required by applicable law or agreed to in writing, software distributed 
 	} else if (scrollView == [document valueForKey:@"fourthTextScrollView"]) {
 		gutterScrollView = [document valueForKey:@"fourthGutterScrollView"];
 	} else {
-		goto allDone;
+		updatingLineNumbersForClipView = nil;
+        allDone = TRUE;
 	}
 	
-	layoutManager = [textView layoutManager];
-	visibleRect = [[scrollView contentView] documentVisibleRect];
-	visibleRange = [layoutManager glyphRangeForBoundingRect:visibleRect inTextContainer:[textView textContainer]];
-	textString = [textView string];
-	searchString = [textString substringWithRange:NSMakeRange(0,visibleRange.location)];
-	
-	for (idx = 0, lineNumber = 0; idx < (NSInteger)visibleRange.location; lineNumber++) {
-		idx = NSMaxRange([searchString lineRangeForRange:NSMakeRange(idx, 0)]);
-	}
-	
-	indexNonWrap = [searchString lineRangeForRange:NSMakeRange(idx, 0)].location;
-	maxRangeVisibleRange = NSMaxRange([textString lineRangeForRange:NSMakeRange(NSMaxRange(visibleRange), 0)]); // Set it to just after the last glyph on the last visible line 
-	numberOfGlyphsInTextString = [layoutManager numberOfGlyphs];
-	oneMoreTime = NO;
-	if (numberOfGlyphsInTextString != 0) {
-		lastGlyph = [textString characterAtIndex:numberOfGlyphsInTextString - 1];
-		if (lastGlyph == '\n' || lastGlyph == '\r') {
-			oneMoreTime = YES; // Continue one more time through the loop if the last glyph isn't newline
-		}
-	}
-	NSMutableString *lineNumbersString = [[[NSMutableString alloc] init] autorelease];
-	
-	while (indexNonWrap <= maxRangeVisibleRange) {
-		if (idx == indexNonWrap) {
-			lineNumber++;
-			[lineNumbersString appendFormat:@"%i\n", lineNumber];
-		} else {
-			[lineNumbersString appendFormat:@"%C\n", 0x00B7];
-			indexNonWrap = idx;
-		}
-		
-		if (idx < maxRangeVisibleRange) {
-			[layoutManager lineFragmentRectForGlyphAtIndex:idx effectiveRange:&range];
-			idx = NSMaxRange(range);
-			indexNonWrap = NSMaxRange([textString lineRangeForRange:NSMakeRange(indexNonWrap, 0)]);
-		} else {
-			idx++;
-			indexNonWrap ++;
-		}
-		
-		if (idx == numberOfGlyphsInTextString && !oneMoreTime) {
-			break;
-		}
-	}
-	
-	if (checkWidth == YES) {
-		widthOfStringInGutter = [lineNumbersString sizeWithAttributes:attributes].width;
-		
-		if (widthOfStringInGutter > ([[document valueForKey:@"gutterWidth"] integerValue] - 14)) { // Check if the gutterTextView has to be resized
-			[document setValue:[NSNumber numberWithInteger:widthOfStringInGutter + 20] forKey:@"gutterWidth"]; // Make it bigger than need be so it doesn't have to resized soon again
-			if ([[document valueForKey:@"showLineNumberGutter"] boolValue] == YES) {
-				gutterWidth = [[document valueForKey:@"gutterWidth"] integerValue];
-			} else {
-				gutterWidth = 0;
-			}
-			currentViewBounds = [[gutterScrollView superview] bounds];
-			[scrollView setFrame:NSMakeRect(gutterWidth, 0, currentViewBounds.size.width - gutterWidth, currentViewBounds.size.height)];
-			
-			[gutterScrollView setFrame:NSMakeRect(0, 0, [[document valueForKey:@"gutterWidth"] integerValue], currentViewBounds.size.height)];
-		}
-	}
-	
-	if (recolour == YES) {
-		[[document valueForKey:@"syntaxColouring"] pageRecolourTextView:textView];
-	}
-	
-	[[gutterScrollView documentView] setString:lineNumbersString];
-	
-	[[gutterScrollView contentView] setBoundsOrigin:zeroPoint]; // To avert an occasional bug which makes the line numbers disappear
-	currentLineHeight = (NSInteger)[textView lineHeight];
-	if ((NSInteger)visibleRect.origin.y != 0 && currentLineHeight != 0) {
-		[[gutterScrollView contentView] scrollToPoint:NSMakePoint(0, ((NSInteger)visibleRect.origin.y % currentLineHeight) + addToScrollPoint)]; // Move currentGutterScrollView so it aligns with the rows in currentTextView
-	}
-	
-allDone:
-	
-	updatingLineNumbersForClipView = nil;
+    if (allDone == FALSE) {
+        layoutManager = [textView layoutManager];
+        visibleRect = [[scrollView contentView] documentVisibleRect];
+        visibleRange = [layoutManager glyphRangeForBoundingRect:visibleRect inTextContainer:[textView textContainer]];
+        textString = [textView string];
+        searchString = [textString substringWithRange:NSMakeRange(0,visibleRange.location)];
+        
+        for (idx = 0, lineNumber = 0; idx < (NSInteger)visibleRange.location; lineNumber++) {
+            idx = NSMaxRange([searchString lineRangeForRange:NSMakeRange(idx, 0)]);
+        }
+        
+        indexNonWrap = [searchString lineRangeForRange:NSMakeRange(idx, 0)].location;
+        maxRangeVisibleRange = NSMaxRange([textString lineRangeForRange:NSMakeRange(NSMaxRange(visibleRange), 0)]); // Set it to just after the last glyph on the last visible line 
+        numberOfGlyphsInTextString = [layoutManager numberOfGlyphs];
+        oneMoreTime = NO;
+        if (numberOfGlyphsInTextString != 0) {
+            lastGlyph = [textString characterAtIndex:numberOfGlyphsInTextString - 1];
+            if (lastGlyph == '\n' || lastGlyph == '\r') {
+                oneMoreTime = YES; // Continue one more time through the loop if the last glyph isn't newline
+            }
+        }
+        NSMutableString *lineNumbersString = [[NSMutableString alloc] init];
+        
+        while (indexNonWrap <= maxRangeVisibleRange) {
+            if (idx == indexNonWrap) {
+                lineNumber++;
+                [lineNumbersString appendFormat:@"%i\n", lineNumber];
+            } else {
+                [lineNumbersString appendFormat:@"%C\n", 0x00B7];
+                indexNonWrap = idx;
+            }
+            
+            if (idx < maxRangeVisibleRange) {
+                [layoutManager lineFragmentRectForGlyphAtIndex:idx effectiveRange:&range];
+                idx = NSMaxRange(range);
+                indexNonWrap = NSMaxRange([textString lineRangeForRange:NSMakeRange(indexNonWrap, 0)]);
+            } else {
+                idx++;
+                indexNonWrap ++;
+            }
+            
+            if (idx == numberOfGlyphsInTextString && !oneMoreTime) {
+                break;
+            }
+        }
+        
+        if (checkWidth == YES) {
+            widthOfStringInGutter = [lineNumbersString sizeWithAttributes:attributes].width;
+            
+            if (widthOfStringInGutter > ([[document valueForKey:@"gutterWidth"] integerValue] - 14)) { // Check if the gutterTextView has to be resized
+                [document setValue:[NSNumber numberWithInteger:widthOfStringInGutter + 20] forKey:@"gutterWidth"]; // Make it bigger than need be so it doesn't have to resized soon again
+                if ([[document valueForKey:@"showLineNumberGutter"] boolValue] == YES) {
+                    gutterWidth = [[document valueForKey:@"gutterWidth"] integerValue];
+                } else {
+                    gutterWidth = 0;
+                }
+                currentViewBounds = [[gutterScrollView superview] bounds];
+                [scrollView setFrame:NSMakeRect(gutterWidth, 0, currentViewBounds.size.width - gutterWidth, currentViewBounds.size.height)];
+                
+                [gutterScrollView setFrame:NSMakeRect(0, 0, [[document valueForKey:@"gutterWidth"] integerValue], currentViewBounds.size.height)];
+            }
+        }
+        
+        if (recolour == YES) {
+            [[document valueForKey:@"syntaxColouring"] pageRecolourTextView:textView];
+        }
+        
+        [[gutterScrollView documentView] setString:lineNumbersString];
+        
+        [[gutterScrollView contentView] setBoundsOrigin:zeroPoint]; // To avert an occasional bug which makes the line numbers disappear
+        currentLineHeight = (NSInteger)[textView lineHeight];
+        if ((NSInteger)visibleRect.origin.y != 0 && currentLineHeight != 0) {
+            [[gutterScrollView contentView] scrollToPoint:NSMakePoint(0, ((NSInteger)visibleRect.origin.y % currentLineHeight) + addToScrollPoint)]; // Move currentGutterScrollView so it aligns with the rows in currentTextView
+        }
+        
+        updatingLineNumbersForClipView = nil;
+    }
 }
 @end

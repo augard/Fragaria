@@ -62,7 +62,7 @@ Unless required by applicable law or agreed to in writing, software distributed 
  */
 - (void)observeValueForKeyPath:(NSString *)keyPath ofObject:(id)object change:(NSDictionary *)change context:(void *)context
 {
-	if ([(NSString *)context isEqualToString:@"FontOrColourValueChanged"]) {
+	if ([(__bridge NSString *)context isEqualToString:@"FontOrColourValueChanged"]) {
 		attributes = [[NSDictionary alloc] initWithObjectsAndKeys:[NSUnarchiver unarchiveObjectWithData:[SMLDefaults valueForKey:@"TextFont"]], NSFontAttributeName, [NSUnarchiver unarchiveObjectWithData:[SMLDefaults valueForKey:@"InvisibleCharactersColourWell"]], NSForegroundColorAttributeName, nil];
 		[[self firstTextView] setNeedsDisplay:YES];
 	} else {
@@ -129,7 +129,7 @@ Unless required by applicable law or agreed to in writing, software distributed 
 	 
 	 */
 	
-	NSMutableAttributedString *attributedString = [[[self attributedString] mutableCopy] autorelease];
+	NSMutableAttributedString *attributedString = [[self attributedString] mutableCopy];
 	NSInteger lastCharacter = [attributedString length];
 	[self removeTemporaryAttribute:NSBackgroundColorAttributeName forCharacterRange:NSMakeRange(0, lastCharacter)];
 	
