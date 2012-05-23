@@ -115,6 +115,17 @@ Unless required by applicable law or agreed to in writing, software distributed 
 
 /*
  
+ - scrollView
+ Added by MrAsterisco on 23/03/2012
+ 
+ */
+
+- (NSScrollView*)scrollView {
+    return (NSScrollView*)[[self superview] superview];
+}
+
+/*
+ 
  - setTextDefaults
  
  */
